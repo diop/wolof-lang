@@ -49,19 +49,48 @@ void add_history(char* unused){}
 
 int main (int argc, char** argv){
   /* Prinnt Version and Exit Information */
-  puts("Wolof Version 0.0.0.1");
+  puts("Wolof Version 0.0.0.0.2");
   puts("Press Ctrl+c to Exit\n");
 
-  /* In a never ending loop */
+  /* Create Some Parsers */
+  mpc_parser_t* Number   = mpc_new("number");
+  mpc_parser_t* Operator = mpc_new("operator");
+  mpc_parser_t* Expr     = mpc_new("expr");
+  mpc_parser_t* Wolof    = mpc_new("wolof");
 
+  /* Define them with the following Language */
+  mpca_lang(MPCA_LANG_DEFAULT,
+    "                                                    \
+      number   : /-?[0-9]+/ ;                            \
+      operator : '+' | '-' | '*' | '/';                  \
+      expr     : <number> | '(' <operator> <expr>+ ')' ; \
+      wolof    : /^/ <operator> <expr>+ /$/ ;            \
+    ",
+  Number, Operator, Expr, Wolof);
+
+  /* In a never ending loop */
   while (1) {
     /* Now in either case readline will be correctly defined */
     char* input = readline("wolof>> ");
     add_history(input);
 
+    /* Attempt to parse the user Input */
+    mpc_result_t r;
+    if (mpc_parse("<stdin>", input, Wolof, &r)) {
+      /* On success Print the AST */
+      mpc_ast_print(r.output);
+      mpc_ast_delete(r.output);
+    } else {
+      /* Otherwsie print the Error */
+      mpc_err_print(r.error);
+      mpc_err_delete(r.error);
+    }
+
     printf("Lolou dou deug, %s\n", input);
     free(input);
   }
+  /* Undefine and Delete our Parser */
+  mpc_cleanup(4, Number, Operator, Expr, Wolof);
 
   return 0;
 }
